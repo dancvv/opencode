@@ -1,0 +1,40 @@
+name: Verify Windows drive root edits
+on:
+  push:
+    branches: [verify-65567-win-native]
+permissions:
+  contents: read
+jobs:
+  windows:
+    if: github.repository == 'dancvv/opencode'
+    name: Windows 2025 (${{ matrix.revision }})
+    runs-on: windows-2025
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        revision: [baseline, candidate]
+    steps:
+      - name: Check out code under test
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: ${{ matrix.revision == 'baseline' && 'anomalyco/opencode' || github.repository }}
+          ref: ${{ matrix.revision == 'baseline' && 'd3abc6706c7fea44ec8c4c3921f685af87a6a771' || github.sha }}
+          persist-credentials: false
+      - name: Check out identical verification cases for both revisions
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.sha }}
+          path: verify-harness
+          sparse-checkout: .github/verify-65567
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      - name: Use the Node version in the CLI build
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '26.4.0'
+      - name: Exercise the edit tool and local file driver
+        shell: pwsh
+        env:
+          VERIFY65567_REVISION: ${{ matrix.revision }}
+        run: ./verify-harness/.github/verify-65567/run.ps1
