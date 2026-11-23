@@ -33,6 +33,14 @@ if ($LASTEXITCODE -ne 0) { throw "subst failed for $drive" }
 try {
   $env:VERIFY65567_ROOT = $drive + '\'
   $env:VERIFY65567_MARKER = $token
+  $workspaceRoot = [IO.Path]::GetPathRoot($repository)
+  $volume = Get-Volume -DriveLetter $workspaceRoot[0] -ErrorAction SilentlyContinue
+  if ($volume -and $volume.DriveType -eq 'Fixed') {
+    $env:VERIFY65567_FIXED_ROOT = $workspaceRoot
+    Write-Host "Fixed workspace volume: root=$workspaceRoot filesystem=$($volume.FileSystem) id=$($volume.UniqueId)"
+  } else {
+    Write-Host "Fixed workspace volume unavailable at $workspaceRoot; running SUBST controls"
+  }
   foreach ($key in @('HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'TMP', 'TEMP', 'TMPDIR',
                      'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_DATA_HOME')) {
     $leaf = switch ($key) {
